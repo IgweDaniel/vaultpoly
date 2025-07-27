@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  vault:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: vault-poly
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_LOCAL_CONFIG: '{"storage":{"file":{"path":"/vault/file"}},"listener":[{"tcp":{"address":"0.0.0.0:8200","tls_disable":true}}],"default_lease_ttl":"168h","max_lease_ttl":"720h","ui":true,"plugin_directory":"/vault/plugins"}'
+     
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/file/data
+      - ./data/init-keys.json:/vault/file/init-keys.json
+      - ./test.sh:/test.sh
+    # Optionally, for debugging:
+    entrypoint: ["/test.sh"]
+    # command: ["vault server -config=/vault/config/config.hcl &"]
+
+volumes:
+  vault_data:
