@@ -8,13 +8,15 @@ type Wallet struct {
 }
 
 const (
-	BlockchainETH BlockchainType = "eth"
-	BlockchainBTC BlockchainType = "btc"
+	BlockchainETH        BlockchainType = "eth"
+	BlockchainBTC        BlockchainType = "btc"
+	BlockchainBTCTestnet BlockchainType = "tbtc"
 )
 
 var SupportedBlockchains = []BlockchainType{
 	BlockchainETH,
 	BlockchainBTC,
+	BlockchainBTCTestnet,
 }
 
 // validate
@@ -29,4 +31,12 @@ func (bt BlockchainType) IsValid() bool {
 
 func (bt BlockchainType) String() string {
 	return string(bt)
+}
+
+func AllowedBlockchains() []interface{} {
+	allowedBlockchains := make([]interface{}, len(SupportedBlockchains))
+	for i, blockchain := range SupportedBlockchains {
+		allowedBlockchains[i] = blockchain.String()
+	}
+	return allowedBlockchains
 }

@@ -96,7 +96,7 @@ func TestWalletSign(t *testing.T) {
 	t.Run("Sign Wallet BTC- pass", func(t *testing.T) {
 
 		resp, err := testWalletCreate(t, b, s,
-			adapters.BlockchainBTC.String(),
+			adapters.BlockchainBTCTestnet.String(),
 			map[string]interface{}{})
 
 		address := resp.Data["address"].(string)
@@ -123,14 +123,16 @@ func TestWalletSign(t *testing.T) {
 		recipient := "tb1qpn5dddjnc2qwurpsm449l6uvggnjxwsetrnksx" // Testnet address
 		payload := testBtcPayload(amount, recipient, utxos)
 
-		resp, err = testWalletSign(t, b, s, adapters.BlockchainBTC.String(), address, map[string]interface{}{
+		resp, err = testWalletSign(t, b, s, adapters.BlockchainBTCTestnet.String(), address, map[string]interface{}{
 			"payload": payload,
 		})
 
-		signature := resp.Data["signature"].(string)
-		require.Nil(t, err)
-		require.Nil(t, resp.Error())
+		require.NoError(t, err)
 		require.NotNil(t, resp)
+		require.Nil(t, resp.Error())
+		require.NotEmpty(t, resp.Data)
+
+		signature := resp.Data["signature"].(string)
 		require.NotEmpty(t, signature)
 
 		txBytes, err := hex.DecodeString(signature)

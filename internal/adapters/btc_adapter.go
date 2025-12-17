@@ -32,10 +32,11 @@ type BtcPayload struct {
 }
 
 type btcAdapter struct {
+	net *chaincfg.Params
 }
 
-func NewBtcAdapter() *btcAdapter {
-	return &btcAdapter{}
+func NewBtcAdapter(net *chaincfg.Params) *btcAdapter {
+	return &btcAdapter{net: net}
 }
 
 func (a *btcAdapter) DeriveWallet() (*Wallet, error) {
@@ -44,12 +45,12 @@ func (a *btcAdapter) DeriveWallet() (*Wallet, error) {
 		return nil, err
 	}
 
-	wif, err := btcutil.NewWIF(privateKey, &chaincfg.TestNet4Params, true)
+	wif, err := btcutil.NewWIF(privateKey, a.net, true)
 	if err != nil {
 		return nil, err
 	}
 
-	addr, err := getPubKey(wif, &chaincfg.TestNet4Params)
+	addr, err := getPubKey(wif, a.net)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public key: %w", err)
 	}
@@ -81,7 +82,12 @@ func (a *btcAdapter) CreateSignedTransaction(wallet *Wallet, payload string) (st
 		return "", fmt.Errorf("failed to decode WIF: %w", err)
 	}
 
-	tx, err := NewTxWithInputsAndOutputs(wif, btcPayload.Recipient, btcPayload.Amount, btcPayload.Utxos, btcPayload.FeeRate)
+	// Ensure the provided wallet belongs to the adapter's configured network.
+	if !wif.IsForNet(a.net) {
+		return "", fmt.Errorf("wif network mismatch: wallet WIF not for %s", a.net.Name)
+	}
+
+	tx, err := a.NewTxWithInputsAndOutputs(wif, btcPayload.Recipient, btcPayload.Amount, btcPayload.Utxos, btcPayload.FeeRate)
 	if err != nil {
 
 		return "", fmt.Errorf("failed to create transaction: %w", err)
@@ -94,12 +100,17 @@ func (a *btcAdapter) CreateSignedTransaction(wallet *Wallet, payload string) (st
 	return hexSignedTx, nil
 }
 
-func NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int64, utxos []UTXO, feeRate float64) (*wire.MsgTx, error) {
+func (a *btcAdapter) NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int64, utxos []UTXO, feeRate float64) (*wire.MsgTx, error) {
 	redeemTx := wire.NewMsgTx(wire.TxVersion)
 
-	destinationAddr, err := btcutil.DecodeAddress(destination, &chaincfg.TestNet4Params)
+	destinationAddr, err := btcutil.DecodeAddress(destination, a.net)
 	if err != nil {
 		return nil, err
+	}
+
+	// Ensure destination address is for the adapter's configured network
+	if !destinationAddr.IsForNet(a.net) {
+		return nil, fmt.Errorf("destination address not for %s", a.net.Name)
 	}
 
 	destinationAddrByte, err := txscript.PayToAddrScript(destinationAddr)
@@ -109,11 +120,15 @@ func NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int6
 
 	// Derive change address (use the same P2WPKH address for simplicity)
 	hash := btcutil.Hash160(wif.PrivKey.PubKey().SerializeCompressed())
-	changeAddr, err := btcutil.NewAddressWitnessPubKeyHash(hash, &chaincfg.TestNet4Params)
-	// changeAddr, err := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeUncompressed(), &chaincfg.TestNet4Params)
+	changeAddr, err := btcutil.NewAddressWitnessPubKeyHash(hash, a.net)
+	// changeAddr, err := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeUncompressed(), a.net)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive change address: %v", err)
+	}
+
+	if !changeAddr.IsForNet(a.net) {
+		return nil, fmt.Errorf("change address not for %s", a.net.Name)
 	}
 
 	// README: THIS ALWAYS MIGRATES TO v0_p2wpkh ADDRESS. is this waht we want? what about specifiying the destination address
@@ -160,7 +175,7 @@ func NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int6
 
 	// estimatedSize := len(utxos)*148 + 3*34 + 10 // inputs * 148 + outputs * 34 + overhead
 	// estimatedFee := int64(estimatedSize) *
-	destType, err := getOutputType(destination)
+	destType, err := a.getOutputType(destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine destination type: %v", err)
 	}
@@ -198,7 +213,7 @@ func NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int6
 
 		sourcePKScript, err := hex.DecodeString(witnessScript)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		switch utxo.ScriptPubKeyType {
 		case "v0_p2wpkh":
@@ -206,7 +221,7 @@ func NewTxWithInputsAndOutputs(wif *btcutil.WIF, destination string, amount int6
 				sourcePKScript, utxo.Value))
 			signature, err := txscript.WitnessSignature(redeemTx, sigHashes, idx, int64(utxo.Value), sourcePKScript, txscript.SigHashAll, wif.PrivKey, true)
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 
 			// Create witness stack
@@ -238,8 +253,8 @@ func getPubKey(wif *btcutil.WIF, cfg *chaincfg.Params) (*btcutil.AddressWitnessP
 	return addr, nil
 }
 
-func getOutputType(address string) (string, error) {
-	addr, err := btcutil.DecodeAddress(address, &chaincfg.TestNet4Params)
+func (a *btcAdapter) getOutputType(address string) (string, error) {
+	addr, err := btcutil.DecodeAddress(address, a.net)
 	if err != nil {
 		return "", err
 	}

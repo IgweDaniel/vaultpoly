@@ -35,7 +35,7 @@ func TestWallets(t *testing.T) {
 	})
 
 	t.Run("Create Wallet - pass BTC", func(t *testing.T) {
-		resp, err := testWalletCreate(t, b, s, adapters.BlockchainBTC.String(), map[string]interface{}{})
+		resp, err := testWalletCreate(t, b, s, adapters.BlockchainBTCTestnet.String(), map[string]interface{}{})
 
 		require.Nil(t, err)
 		require.Nil(t, resp.Error())
