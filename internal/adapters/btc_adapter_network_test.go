@@ -14,7 +14,7 @@ import (
 )
 
 func TestCreateSignedTransaction_VerifySignature(t *testing.T) {
-	net := &chaincfg.TestNet3Params
+	net := &chaincfg.TestNet4Params
 	a := NewBtcAdapter(net)
 
 	wallet, err := a.DeriveWallet()
