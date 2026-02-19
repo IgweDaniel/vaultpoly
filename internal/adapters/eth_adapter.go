@@ -31,6 +31,27 @@ func NewEthAdapter() *ethereumAdapter {
 	return &ethereumAdapter{}
 }
 
+func (a *ethereumAdapter) ImportWallet(privateKeyHex string) (*Wallet, error) {
+	if len(privateKeyHex) >= 2 && privateKeyHex[:2] == "0x" {
+		privateKeyHex = privateKeyHex[2:]
+	}
+
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key: %w", err)
+	}
+
+	publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to derive public key from private key")
+	}
+
+	return &Wallet{
+		PrivateKey: privateKeyHex,
+		PublicKey:  crypto.PubkeyToAddress(*publicKeyECDSA).Hex(),
+	}, nil
+}
+
 func (a *ethereumAdapter) DeriveWallet() (*Wallet, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {

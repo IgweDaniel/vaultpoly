@@ -39,6 +39,27 @@ func NewBtcAdapter(net *chaincfg.Params) *btcAdapter {
 	return &btcAdapter{net: net}
 }
 
+func (a *btcAdapter) ImportWallet(privateKeyWIF string) (*Wallet, error) {
+	wif, err := btcutil.DecodeWIF(privateKeyWIF)
+	if err != nil {
+		return nil, fmt.Errorf("invalid WIF private key: %w", err)
+	}
+
+	if !wif.IsForNet(a.net) {
+		return nil, fmt.Errorf("private key is not for %s network", a.net.Name)
+	}
+
+	addr, err := getPubKey(wif, a.net)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive address from private key: %w", err)
+	}
+
+	return &Wallet{
+		PrivateKey: wif.String(),
+		PublicKey:  addr.EncodeAddress(),
+	}, nil
+}
+
 func (a *btcAdapter) DeriveWallet() (*Wallet, error) {
 	privateKey, err := btcec.NewPrivateKey()
 	if err != nil {

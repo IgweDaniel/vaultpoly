@@ -38,6 +38,7 @@ func backend() *pluginBackend {
 		},
 		Paths: framework.PathAppend(
 			walletsPaths(&b),
+			importPaths(&b),
 			pathSign(&b),
 		),
 		Secrets:     []*framework.Secret{},
