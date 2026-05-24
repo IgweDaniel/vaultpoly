@@ -2,6 +2,7 @@ package vaultpoly
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -41,6 +42,16 @@ func TestWallets(t *testing.T) {
 		require.Nil(t, resp.Error())
 		require.NotNil(t, resp)
 		require.NotEmpty(t, resp.Data["address"])
+	})
+
+	t.Run("Create Wallet - pass TRON", func(t *testing.T) {
+		resp, err := testWalletCreate(t, b, s, adapters.BlockchainTRON.String(), map[string]interface{}{})
+
+		require.Nil(t, err)
+		require.Nil(t, resp.Error())
+		require.NotNil(t, resp)
+		require.NotEmpty(t, resp.Data["address"])
+		require.True(t, strings.HasPrefix(resp.Data["address"].(string), "T"))
 	})
 
 }

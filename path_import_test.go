@@ -3,6 +3,7 @@ package vaultpoly
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -12,15 +13,20 @@ import (
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/igwedaniel/vaultpoly/internal/adapters"
 	"github.com/stretchr/testify/require"
 )
+
+const tronNileUSDTTransferRawDataHex = "0a0284122208d4c3ce31ed0ef92c40e0d5858fe5335aae01081f12a9010a31747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e54726967676572536d617274436f6e747261637412740a154166f0494d0de9f4fae19b118d1e0ae7019cff5f29121541eca9bc828a3005b9a3b909f2cc5c2a54794de05f2244a9059cbb0000000000000000000000009e7bf6be6815ad07a306b80934963397709e787d00000000000000000000000000000000000000000000000000000000000f4240708081828fe5339001c0f4a46b"
+const tronNileUSDTTransferTxID = "ec884c553cd14bc3917b8e79e0677d7b9e5e95a0f96ba3bca4cfa4cc30473a35"
 
 func TestImportAndSign(t *testing.T) {
 	b, s := getTestBackend(t)
@@ -31,6 +37,10 @@ func TestImportAndSign(t *testing.T) {
 
 	t.Run("Import and sign BTC", func(t *testing.T) {
 		testImportAndSignBTC(t, b, s)
+	})
+
+	t.Run("Import and sign TRON", func(t *testing.T) {
+		testImportAndSignTRON(t, b, s)
 	})
 }
 
@@ -192,6 +202,49 @@ func testImportAndSignBTC(t *testing.T, b *pluginBackend, s logical.Storage) {
 	}
 	actualFee := utxo.Value - totalOutput
 	require.True(t, actualFee > 0, "Transaction fee should be positive")
+}
+
+func testImportAndSignTRON(t *testing.T, b *pluginBackend, s logical.Storage) {
+	privateKey := "aa18efe8e8b1da4488e9f1350ad1f25ad387229177907ddb5c57e9cc22a74592"
+	expectedAddress := "TCXxPfJ15HiAAwEeHmAAg6cNKdAsXk4abF"
+
+	importResp, err := testWalletImport(t, b, s, adapters.BlockchainTRON.String(), privateKey)
+	require.NoError(t, err)
+	require.NotNil(t, importResp)
+	require.Nil(t, importResp.Error())
+
+	address := importResp.Data["address"].(string)
+	require.Equal(t, expectedAddress, address)
+
+	rawDataHex := tronNileUSDTTransferRawDataHex
+	payloadBytes, err := json.Marshal(adapters.TronPayload{
+		RawDataHex: rawDataHex,
+	})
+	require.NoError(t, err)
+
+	signResp, err := testWalletSign(t, b, s, adapters.BlockchainTRON.String(), address, map[string]interface{}{
+		"payload": string(payloadBytes),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, signResp)
+	require.Nil(t, signResp.Error())
+
+	signature := signResp.Data["signature"].(string)
+	sigBytes, err := hex.DecodeString(signature)
+	require.NoError(t, err)
+	require.Len(t, sigBytes, 65)
+
+	rawDataBytes, err := hex.DecodeString(rawDataHex)
+	require.NoError(t, err)
+	hash := sha256.Sum256(rawDataBytes)
+
+	pubKey, err := crypto.SigToPub(hash[:], sigBytes)
+	require.NoError(t, err)
+
+	pubBytes := crypto.FromECDSAPub(pubKey)
+	addressBytes := crypto.Keccak256(pubBytes[1:])[12:]
+	recoveredAddress := base58.CheckEncode(addressBytes, 0x41)
+	require.Equal(t, address, recoveredAddress)
 }
 
 func testWalletImport(t *testing.T, b *pluginBackend, s logical.Storage, blockchainType string, privateKey string) (*logical.Response, error) {

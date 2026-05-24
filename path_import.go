@@ -26,13 +26,13 @@ func importPaths(b *pluginBackend) []*framework.Path {
 				"blockchainType": {
 					Type:          framework.TypeString,
 					Default:       "eth",
-					Description:   "The blockchain type for the wallet. Currently supported: 'eth', 'btc', 'tbtc'.",
+					Description:   "The blockchain type for the wallet. Currently supported: 'eth', 'btc', 'tbtc', 'tron'.",
 					AllowedValues: adapters.AllowedBlockchains(),
 				},
 				"private_key": {
 					Type:        framework.TypeString,
 					Required:    true,
-					Description: "The private key to import. Hex-encoded for Ethereum, WIF-encoded for Bitcoin.",
+					Description: "The private key to import. Hex-encoded for Ethereum/TRON, WIF-encoded for Bitcoin.",
 				},
 			},
 

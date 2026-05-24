@@ -14,6 +14,8 @@ func GetAdapter(blockchainType BlockchainType) (BlockchainAdapter, error) {
 		return NewBtcAdapter(&chaincfg.MainNetParams), nil
 	case BlockchainBTCTestnet:
 		return NewBtcAdapter(&chaincfg.TestNet4Params), nil
+	case BlockchainTRON:
+		return NewTronAdapter(), nil
 	default:
 		return nil, fmt.Errorf("unsupported blockchain type: %s", blockchainType)
 	}

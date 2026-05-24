@@ -23,7 +23,7 @@ func pathSign(b *pluginBackend) []*framework.Path {
 				"blockchainType": {
 					Type:          framework.TypeString,
 					Required:      true,
-					Description:   "The blockchain type for the account. Currently supported: 'eth', 'btc', 'tbtc'.",
+					Description:   "The blockchain type for the account. Currently supported: 'eth', 'btc', 'tbtc', 'tron'.",
 					AllowedValues: adapters.AllowedBlockchains(),
 				},
 				"address": {
