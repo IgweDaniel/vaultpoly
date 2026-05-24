@@ -11,12 +11,14 @@ const (
 	BlockchainETH        BlockchainType = "eth"
 	BlockchainBTC        BlockchainType = "btc"
 	BlockchainBTCTestnet BlockchainType = "tbtc"
+	BlockchainTRON       BlockchainType = "tron"
 )
 
 var SupportedBlockchains = []BlockchainType{
 	BlockchainETH,
 	BlockchainBTC,
 	BlockchainBTCTestnet,
+	BlockchainTRON,
 }
 
 // validate

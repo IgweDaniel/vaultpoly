@@ -3,6 +3,7 @@ package vaultpoly
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -12,10 +13,12 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/igwedaniel/vaultpoly/internal/adapters"
@@ -224,6 +227,95 @@ func TestWalletSign(t *testing.T) {
 		actualFee := totalInput - totalOutput
 		require.True(t, actualFee > 0, "Transaction fee should be positive")
 		require.True(t, actualFee < totalInput/2, "Transaction fee seems unreasonably high")
+	})
+
+	t.Run("Sign Wallet TRON - pass", func(t *testing.T) {
+		resp, err := testWalletCreate(t, b, s, adapters.BlockchainTRON.String(), map[string]interface{}{})
+		require.NoError(t, err)
+		require.NotEmpty(t, resp.Data["address"])
+		address := resp.Data["address"].(string)
+
+		rawDataHex := tronNileUSDTTransferRawDataHex
+		payloadJSON, err := json.Marshal(adapters.TronPayload{
+			RawDataHex: rawDataHex,
+		})
+		require.NoError(t, err)
+
+		resp, err = testWalletSign(t, b, s, adapters.BlockchainTRON.String(), address, map[string]interface{}{
+			"payload": string(payloadJSON),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Nil(t, resp.Error())
+
+		signature := resp.Data["signature"].(string)
+		sigBytes, err := hex.DecodeString(signature)
+		require.NoError(t, err)
+		require.Len(t, sigBytes, 65)
+
+		rawDataBytes, err := hex.DecodeString(rawDataHex)
+		require.NoError(t, err)
+		hash := sha256.Sum256(rawDataBytes)
+
+		pubKey, err := crypto.SigToPub(hash[:], sigBytes)
+		require.NoError(t, err)
+
+		pubKeyBytes := crypto.FromECDSAPub(pubKey)
+		addressBytes := crypto.Keccak256(pubKeyBytes[1:])[12:]
+		recoveredAddress := base58.CheckEncode(addressBytes, 0x41)
+		require.Equal(t, address, recoveredAddress)
+	})
+
+	t.Run("Sign Wallet TRON - with transaction payload", func(t *testing.T) {
+		resp, err := testWalletCreate(t, b, s, adapters.BlockchainTRON.String(), map[string]interface{}{})
+		require.NoError(t, err)
+		require.NotEmpty(t, resp.Data["address"])
+		address := resp.Data["address"].(string)
+
+		rawDataHex := tronNileUSDTTransferRawDataHex
+		payloadJSON, err := json.Marshal(adapters.TronPayload{
+			RawDataHex: rawDataHex,
+			Transaction: map[string]interface{}{
+				"txID":         tronNileUSDTTransferTxID,
+				"raw_data_hex": rawDataHex,
+				"raw_data": map[string]interface{}{
+					"contract": []interface{}{
+						map[string]interface{}{
+							"type": "TriggerSmartContract",
+							"parameter": map[string]interface{}{
+								"type_url": "type.googleapis.com/protocol.TriggerSmartContract",
+							},
+						},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		resp, err = testWalletSign(t, b, s, adapters.BlockchainTRON.String(), address, map[string]interface{}{
+			"payload": string(payloadJSON),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Nil(t, resp.Error())
+
+		signedTxJSON := resp.Data["signature"].(string)
+		var signedTx map[string]interface{}
+		err = json.Unmarshal([]byte(signedTxJSON), &signedTx)
+		require.NoError(t, err)
+
+		require.Equal(t, tronNileUSDTTransferTxID, signedTx["txID"])
+		require.Equal(t, rawDataHex, signedTx["raw_data_hex"])
+
+		signatures, ok := signedTx["signature"].([]interface{})
+		require.True(t, ok)
+		require.Len(t, signatures, 1)
+
+		sigHex, ok := signatures[0].(string)
+		require.True(t, ok)
+		sigBytes, err := hex.DecodeString(sigHex)
+		require.NoError(t, err)
+		require.Len(t, sigBytes, 65)
 	})
 
 }
