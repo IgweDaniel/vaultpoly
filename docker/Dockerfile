@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 
@@ -25,7 +25,8 @@ COPY --from=builder /build/vaultpoly /vault/plugins/vaultpoly
 COPY --from=builder /build/SHA256SUMS /vault/plugins/SHA256SUMS
 
 COPY ./docker/config.hcl /vault/config/config.hcl
-# Copy test script
+COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 RUN setcap cap_ipc_lock=+ep /vault/plugins/vaultpoly
 
@@ -35,4 +36,3 @@ RUN setcap cap_ipc_lock=+ep /vault/plugins/vaultpoly
 
 # Expose Vault port
 EXPOSE 8200
-
