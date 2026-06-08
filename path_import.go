@@ -19,20 +19,21 @@ func importPaths(b *pluginBackend) []*framework.Path {
 
     POST - import a wallet by providing its private key.
            For Ethereum: provide the hex-encoded private key (with or without 0x prefix).
-           For Bitcoin:  provide the WIF-encoded private key.
+           For Bitcoin/Litecoin: provide the WIF-encoded private key.
+           For Solana: provide the base58 private key or Solana keygen JSON array.
 
 `,
 			Fields: map[string]*framework.FieldSchema{
 				"blockchainType": {
 					Type:          framework.TypeString,
 					Default:       "eth",
-					Description:   "The blockchain type for the wallet. Currently supported: 'eth', 'btc', 'tbtc', 'tron'.",
+					Description:   "The blockchain type for the wallet. Currently supported: 'eth', 'btc', 'tbtc', 'tron', 'ltc', 'tltc', 'sol'.",
 					AllowedValues: adapters.AllowedBlockchains(),
 				},
 				"private_key": {
 					Type:        framework.TypeString,
 					Required:    true,
-					Description: "The private key to import. Hex-encoded for Ethereum/TRON, WIF-encoded for Bitcoin.",
+					Description: "The private key to import. Hex-encoded for Ethereum/TRON, WIF-encoded for Bitcoin/Litecoin, base58 or keygen JSON for Solana.",
 				},
 			},
 

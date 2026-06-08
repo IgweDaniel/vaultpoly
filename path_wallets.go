@@ -34,7 +34,7 @@ func walletsPaths(b *pluginBackend) []*framework.Path {
 				"blockchainType": {
 					Type:          framework.TypeString,
 					Default:       "eth",
-					Description:   "The blockchain type for the account. Currently supported: 'eth', 'btc', 'tbtc', 'tron'.",
+					Description:   "The blockchain type for the account. Currently supported: 'eth', 'btc', 'tbtc', 'tron', 'ltc', 'tltc', 'sol'.",
 					AllowedValues: adapters.AllowedBlockchains(),
 				},
 				"mnemonic": {

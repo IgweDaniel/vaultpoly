@@ -16,6 +16,12 @@ func GetAdapter(blockchainType BlockchainType) (BlockchainAdapter, error) {
 		return NewBtcAdapter(&chaincfg.TestNet4Params), nil
 	case BlockchainTRON:
 		return NewTronAdapter(), nil
+	case BlockchainLTC:
+		return NewBtcAdapter(LitecoinMainNetParams), nil
+	case BlockchainLTCTestnet:
+		return NewBtcAdapter(LitecoinTestNetParams), nil
+	case BlockchainSOL:
+		return NewSolanaAdapter(), nil
 	default:
 		return nil, fmt.Errorf("unsupported blockchain type: %s", blockchainType)
 	}
