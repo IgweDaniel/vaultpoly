@@ -12,6 +12,9 @@ const (
 	BlockchainBTC        BlockchainType = "btc"
 	BlockchainBTCTestnet BlockchainType = "tbtc"
 	BlockchainTRON       BlockchainType = "tron"
+	BlockchainLTC        BlockchainType = "ltc"
+	BlockchainLTCTestnet BlockchainType = "tltc"
+	BlockchainSOL        BlockchainType = "sol"
 )
 
 var SupportedBlockchains = []BlockchainType{
@@ -19,6 +22,9 @@ var SupportedBlockchains = []BlockchainType{
 	BlockchainBTC,
 	BlockchainBTCTestnet,
 	BlockchainTRON,
+	BlockchainLTC,
+	BlockchainLTCTestnet,
+	BlockchainSOL,
 }
 
 // validate

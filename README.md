@@ -1,11 +1,11 @@
 # VaultPoly
 
-VaultPoly is a HashiCorp Vault plugin for managing blockchain wallets and signing transactions for Ethereum and Bitcoin. It provides secure wallet creation, storage, and transaction signing via Vault API endpoints.
+VaultPoly is a HashiCorp Vault plugin for managing blockchain wallets and signing transactions for Ethereum, Bitcoin, TRON, Litecoin, and Solana. It provides secure wallet creation, storage, and transaction signing via Vault API endpoints.
 
 ## Features
 
-- Create and manage Ethereum and Bitcoin wallets
-- Sign Ethereum and Bitcoin transactions
+- Create and manage Ethereum, Bitcoin, TRON, Litecoin, and Solana wallets
+- Sign Ethereum, Bitcoin, TRON, Litecoin, and Solana transactions
 - Secure storage of private keys using Vault
 - Extensible adapter-based architecture
 
@@ -49,7 +49,7 @@ vault secrets enable -path=vault-poly \
 
 **Endpoint:** `POST /v1/vault-poly/wallets/<blockchainType>`
 
-- `blockchainType`: `eth` or `btc`
+- `blockchainType`: `eth`, `btc`, `tbtc`, `tron`, `ltc`, `tltc`, or `sol`
 
 **Example:**
 
@@ -86,7 +86,7 @@ curl --header "X-Vault-Token: <token>" \
 
 **Endpoint:** `POST /v1/vault-poly/wallets/<blockchainType>/<address>/sign`
 
-- `blockchainType`: `eth` or `btc`
+- `blockchainType`: `eth`, `btc`, `tbtc`, `tron`, `ltc`, `tltc`, or `sol`
 - `address`: Wallet address
 - `payload`: JSON-encoded transaction payload (see below)
 
@@ -108,6 +108,24 @@ curl --header "X-Vault-Token: <token>" \
      http://127.0.0.1:8200/v1/vault-poly/wallets/btc/<address>/sign
 ```
 
+**Example (Litecoin):**
+
+```
+curl --header "X-Vault-Token: <token>" \
+     --request POST \
+     --data '{"payload": "{...}"}' \
+     http://127.0.0.1:8200/v1/vault-poly/wallets/ltc/<address>/sign
+```
+
+**Example (Solana):**
+
+```
+curl --header "X-Vault-Token: <token>" \
+     --request POST \
+     --data '{"payload": "{...}"}' \
+     http://127.0.0.1:8200/v1/vault-poly/wallets/sol/<address>/sign
+```
+
 #### Ethereum Payload Example
 
 ```
@@ -122,7 +140,7 @@ curl --header "X-Vault-Token: <token>" \
 }
 ```
 
-#### Bitcoin Payload Example
+#### Bitcoin/Litecoin Payload Example
 
 ```
 {
@@ -140,6 +158,19 @@ curl --header "X-Vault-Token: <token>" \
   ]
 }
 ```
+
+#### Solana Payload Example
+
+Provide a serialized unsigned or partially signed Solana transaction. VaultPoly signs with the matching wallet key and returns the signed transaction using `output_encoding` (`base64`, `base58`, or `hex`; default `base64`).
+
+```
+{
+  "transaction_base64": "...",
+  "output_encoding": "base64"
+}
+```
+
+You may also provide `transaction_base58` or `transaction_hex`.
 
 ## Testing
 
